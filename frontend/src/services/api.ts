@@ -1,6 +1,6 @@
 import { MerchantConfig, PaymentSession, Transaction, TransactionStats, DeviceStatus } from '../types';
 
-const API_BASE = (import.meta.env.VITE_API_URL || '').replace(/\/+$/, '') + '/api';
+const API_BASE = (import.meta.env.VITE_API_URL || 'https://payflow-upi-backend.onrender.com').replace(/\/+$/, '') + '/api';
 
 export const api = {
   // Session API

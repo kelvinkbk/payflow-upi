@@ -20,8 +20,12 @@ export function useWebSocket(options: UseWebSocketOptions = {}) {
     try {
       let wsUrl = import.meta.env.VITE_WS_URL;
       if (!wsUrl) {
-        const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-        wsUrl = `${protocol}//${window.location.host}/ws`;
+        if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+          const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+          wsUrl = `${protocol}//${window.location.host}/ws`;
+        } else {
+          wsUrl = 'wss://payflow-upi-backend.onrender.com/ws';
+        }
       }
 
       const ws = new WebSocket(wsUrl);
