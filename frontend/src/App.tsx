@@ -52,12 +52,18 @@ export function App() {
 
   const { announcePayment } = useSoundbox();
 
-  const isCustomerLink = Boolean(new URLSearchParams(window.location.search).get('session'));
+  const urlParams = new URLSearchParams(window.location.search);
+  const isCustomerLink = Boolean(urlParams.get('session') || urlParams.get('amount') || urlParams.get('pay'));
 
   // Load initial data
   const loadInitialData = useCallback(async () => {
     try {
-      const querySessionId = new URLSearchParams(window.location.search).get('session');
+      const url = new URLSearchParams(window.location.search);
+      const querySessionId = url.get('session') || url.get('id');
+      const queryAmount = url.get('amount') || url.get('amt') || url.get('pay');
+      const queryNote = url.get('note') || url.get('desc');
+
+      // Case 1: Existing session by ID
       if (querySessionId) {
         const [cfgRes, sessionRes] = await Promise.all([
           api.getConfig(),
@@ -66,6 +72,20 @@ export function App() {
         if (cfgRes.success) setConfig(cfgRes.data);
         if (sessionRes.success && sessionRes.data) setCurrentSession(sessionRes.data);
         return;
+      }
+
+      // Case 2: Dynamic on-the-fly custom amount link (e.g. ?amount=250&note=Camp+Registration)
+      if (queryAmount) {
+        const amountNum = parseFloat(queryAmount);
+        if (!isNaN(amountNum) && amountNum > 0) {
+          const [cfgRes, sessionRes] = await Promise.all([
+            api.getConfig(),
+            api.createSession(amountNum, queryNote || undefined).catch(() => ({ success: false, data: null }))
+          ]);
+          if (cfgRes.success) setConfig(cfgRes.data);
+          if (sessionRes.success && sessionRes.data) setCurrentSession(sessionRes.data);
+          return;
+        }
       }
 
       const [cfgRes, sessionRes, txRes] = await Promise.all([
