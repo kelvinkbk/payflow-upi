@@ -178,13 +178,9 @@ export function App() {
   // Setup WebSocket real-time listener
   const { isConnected } = useWebSocket({
     onPaymentReceived: handlePaymentReceived,
-    onUnsolicitedPayment: handleUnsolicitedPayment,
     onSessionCreated: handleSessionCreated,
     onSessionCancelled: () => handleSessionStateChange(null),
-    onSessionReset: () => handleSessionStateChange(null),
-    onSessionExpired: () => {
-      setCurrentSession((prev) => prev ? { ...prev, status: 'EXPIRED' } : null);
-    }
+    onAmountMismatch: handleUnsolicitedPayment
   });
 
   // Cashier POS Actions
@@ -514,7 +510,7 @@ export function App() {
       <DemoSimulatorModal
         isOpen={isSimulatorOpen}
         onClose={() => setIsSimulatorOpen(false)}
-        activeSessionAmount={currentSession?.status === 'WAITING_FOR_PAYMENT' ? currentSession.amount : undefined}
+        activeAmount={currentSession?.status === 'WAITING_FOR_PAYMENT' ? currentSession.amount : undefined}
       />
 
       <SettingsDrawer
@@ -526,3 +522,5 @@ export function App() {
     </div>
   );
 }
+
+export default App;

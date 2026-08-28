@@ -47,7 +47,7 @@ export const SettingsDrawer: React.FC<SettingsDrawerProps> = ({
       await api.updateConfig(updated);
       
       if (adminPinInput.trim()) {
-        await api.updateAdminPin(adminPinInput.trim());
+        await api.changeAdminPassword(adminPinInput.trim());
       }
 
       onConfigSaved({
