@@ -5,6 +5,7 @@ import { WebhookController } from '../controllers/webhook.controller.js';
 import { TransactionController } from '../controllers/transaction.controller.js';
 import { ConfigController } from '../controllers/config.controller.js';
 import { IosWebhookController } from '../controllers/iosWebhook.controller.js';
+import { AdminAuthController } from '../controllers/adminAuth.controller.js';
 import { authenticateDevice } from '../middleware/auth.middleware.js';
 
 export const apiRouter = Router();
@@ -17,6 +18,10 @@ apiRouter.get('/health', (req, res) => {
     timestamp: new Date().toISOString()
   });
 });
+
+// Server-side Permanent Admin Login Authentication
+apiRouter.post('/admin/login', AdminAuthController.login);
+apiRouter.post('/admin/change-password', AdminAuthController.changePassword);
 
 // Payment Session Lifecycle
 apiRouter.post('/payment-session', SessionController.createSession);
