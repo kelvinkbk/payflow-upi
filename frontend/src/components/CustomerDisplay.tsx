@@ -116,11 +116,11 @@ export const CustomerDisplay: React.FC<CustomerDisplayProps> = ({
 
         {/* Direct Mobile UPI App Selectors */}
         {(() => {
-          const upiQuery = session.upi_uri.replace(/^upi:\/\/pay\?/, '');
+          const upiQuery = session.upi_uri.replace(/^upi:\/\/pay\?/, '').replace(/%40/g, '@');
           const gpayUri = `tez://upi/pay?${upiQuery}`;
           const phonepeUri = `phonepe://pay?${upiQuery}`;
-          const paytmUri = `paytmmp://pay?${upiQuery}`;
-          const bhimUri = `bhim://pay?${upiQuery}`;
+          const paytmUri = `paytmmp://upi/pay?${upiQuery}`;
+          const cleanUpiUri = `upi://pay?${upiQuery}`;
 
           return (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', width: '100%', maxWidth: '380px', marginTop: '16px' }}>
@@ -175,7 +175,7 @@ export const CustomerDisplay: React.FC<CustomerDisplayProps> = ({
                 </a>
 
                 <a
-                  href={session.upi_uri}
+                  href={cleanUpiUri}
                   className="btn-secondary"
                   style={{
                     textDecoration: 'none',
