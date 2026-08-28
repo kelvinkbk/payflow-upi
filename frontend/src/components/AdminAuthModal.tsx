@@ -1,34 +1,45 @@
 import React, { useState } from 'react';
-import { Lock, ShieldCheck, KeyRound } from 'lucide-react';
+import { Lock, KeyRound } from 'lucide-react';
+import { api } from '../services/api';
 
 interface AdminAuthModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSuccess: () => void;
-  correctPin: string;
 }
 
 export const AdminAuthModal: React.FC<AdminAuthModalProps> = ({
   isOpen,
   onClose,
-  onSuccess,
-  correctPin
+  onSuccess
 }) => {
   const [pin, setPin] = useState('');
-  const [error, setError] = useState(false);
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
 
   if (!isOpen) return null;
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (pin.trim() === correctPin.trim()) {
-      sessionStorage.setItem('payflow_admin_auth', 'true');
-      setError(false);
-      setPin('');
-      onSuccess();
-    } else {
-      setError(true);
-      setPin('');
+    if (!pin.trim()) return;
+
+    setIsLoading(true);
+    setErrorMsg(null);
+
+    try {
+      const res = await api.verifyAdminPin(pin.trim());
+      if (res.success) {
+        sessionStorage.setItem('payflow_admin_auth', 'true');
+        setPin('');
+        onSuccess();
+      } else {
+        setErrorMsg(res.error || 'Incorrect Admin PIN / Password');
+        setPin('');
+      }
+    } catch (err: any) {
+      setErrorMsg('Failed to verify PIN with server. Please try again.');
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -54,10 +65,10 @@ export const AdminAuthModal: React.FC<AdminAuthModalProps> = ({
           Admin Authentication
         </h3>
         <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem', marginBottom: '20px' }}>
-          Enter PIN to access POS counter and transactions ledger.
+          Enter Admin PIN / Password to access POS Counter and Ledger.
         </p>
 
-        {error && (
+        {errorMsg && (
           <div style={{
             background: 'rgba(239, 68, 68, 0.15)',
             border: '1px solid rgba(239, 68, 68, 0.35)',
@@ -67,7 +78,7 @@ export const AdminAuthModal: React.FC<AdminAuthModalProps> = ({
             fontSize: '0.82rem',
             marginBottom: '16px'
           }}>
-            Incorrect PIN. Please try again.
+            {errorMsg}
           </div>
         )}
 
@@ -77,11 +88,12 @@ export const AdminAuthModal: React.FC<AdminAuthModalProps> = ({
             <input
               type="password"
               autoFocus
-              placeholder="Enter PIN (Default: 1234)"
+              required
+              placeholder="Enter Admin PIN"
               value={pin}
               onChange={(e) => {
                 setPin(e.target.value);
-                setError(false);
+                setErrorMsg(null);
               }}
               style={{
                 width: '100%',
@@ -103,6 +115,7 @@ export const AdminAuthModal: React.FC<AdminAuthModalProps> = ({
               type="button"
               className="btn-secondary"
               onClick={onClose}
+              disabled={isLoading}
               style={{ flex: 1, padding: '10px' }}
             >
               Cancel
@@ -110,16 +123,13 @@ export const AdminAuthModal: React.FC<AdminAuthModalProps> = ({
             <button
               type="submit"
               className="btn-primary"
+              disabled={isLoading}
               style={{ flex: 1, padding: '10px' }}
             >
-              Unlock
+              {isLoading ? 'Verifying...' : 'Unlock'}
             </button>
           </div>
         </form>
-
-        <div style={{ marginTop: '16px', fontSize: '0.75rem', color: 'var(--text-muted)' }}>
-          Default PIN is <strong style={{ color: '#93c5fd' }}>1234</strong> (customizable in Settings)
-        </div>
       </div>
     </div>
   );

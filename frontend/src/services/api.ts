@@ -96,5 +96,24 @@ export const api = {
     const res = await fetch(`${API_BASE}/device/status`);
     if (!res.ok) return { connected: false, status: 'OFFLINE' };
     return res.json();
+  },
+
+  // Admin Server-side PIN Authentication
+  async verifyAdminPin(pin: string): Promise<{ success: boolean; error?: string }> {
+    const res = await fetch(`${API_BASE}/admin/verify-pin`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ pin })
+    });
+    return res.json();
+  },
+
+  async updateAdminPin(newPin: string): Promise<{ success: boolean; message?: string; error?: string }> {
+    const res = await fetch(`${API_BASE}/admin/update-pin`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ newPin })
+    });
+    return res.json();
   }
 };

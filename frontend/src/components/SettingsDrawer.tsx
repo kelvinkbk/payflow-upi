@@ -23,6 +23,7 @@ export const SettingsDrawer: React.FC<SettingsDrawerProps> = ({
   const [soundboxVoiceEnabled, setSoundboxVoiceEnabled] = useState(config.soundboxVoiceEnabled);
   const [soundboxLanguage, setSoundboxLanguage] = useState(config.soundboxLanguage);
   const [androidDeviceToken, setAndroidDeviceToken] = useState(config.androidDeviceToken);
+  const [adminPinInput, setAdminPinInput] = useState('');
   const [isSaving, setIsSaving] = useState(false);
   const [msg, setMsg] = useState<{ text: string; isError: boolean } | null>(null);
 
@@ -44,6 +45,11 @@ export const SettingsDrawer: React.FC<SettingsDrawerProps> = ({
       };
 
       await api.updateConfig(updated);
+      
+      if (adminPinInput.trim()) {
+        await api.updateAdminPin(adminPinInput.trim());
+      }
+
       onConfigSaved({
         ...config,
         ...updated
@@ -198,19 +204,14 @@ export const SettingsDrawer: React.FC<SettingsDrawerProps> = ({
               <Key size={16} style={{ color: '#3b82f6' }} /> Admin Dashboard PIN / Password
             </label>
             <input
-              type="text"
+              type="password"
               className="form-input"
-              defaultValue={localStorage.getItem('payflow_admin_pin') || '1234'}
-              onChange={(e) => {
-                if (e.target.value) {
-                  localStorage.setItem('payflow_admin_pin', e.target.value.trim());
-                }
-              }}
-              required
-              placeholder="e.g. 1234 or your secret PIN"
+              value={adminPinInput}
+              onChange={(e) => setAdminPinInput(e.target.value)}
+              placeholder="Leave blank to keep current PIN, or type new PIN"
             />
             <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
-              PIN required to unlock POS Counter and Transactions Ledger from public mode.
+              Sets permanent Admin PIN across all devices in backend database.
             </span>
           </div>
 
