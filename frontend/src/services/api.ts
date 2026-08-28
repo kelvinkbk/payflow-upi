@@ -23,6 +23,12 @@ export const api = {
     return res.json();
   },
 
+  async getSession(id: string): Promise<{ success: boolean; data: PaymentSession }> {
+    const res = await fetch(`${API_BASE}/payment-session/${id}`);
+    if (!res.ok) throw new Error('Failed to fetch session');
+    return res.json();
+  },
+
   async cancelSession(): Promise<{ success: boolean; message: string }> {
     const res = await fetch(`${API_BASE}/payment-session/cancel`, { method: 'POST' });
     return res.json();

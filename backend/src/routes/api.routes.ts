@@ -21,6 +21,7 @@ apiRouter.get('/health', (req, res) => {
 // Payment Session Lifecycle
 apiRouter.post('/payment-session', SessionController.createSession);
 apiRouter.get('/payment-session/current', SessionController.getCurrentSession);
+apiRouter.get('/payment-session/:id', SessionController.getSession);
 apiRouter.post('/payment-session/cancel', SessionController.cancelSession);
 apiRouter.post('/payment-session/reset', SessionController.resetSession);
 

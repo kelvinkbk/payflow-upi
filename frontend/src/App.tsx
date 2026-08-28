@@ -52,9 +52,22 @@ export function App() {
 
   const { announcePayment } = useSoundbox();
 
+  const isCustomerLink = Boolean(new URLSearchParams(window.location.search).get('session'));
+
   // Load initial data
   const loadInitialData = useCallback(async () => {
     try {
+      const querySessionId = new URLSearchParams(window.location.search).get('session');
+      if (querySessionId) {
+        const [cfgRes, sessionRes] = await Promise.all([
+          api.getConfig(),
+          api.getSession(querySessionId).catch(() => ({ success: false, data: null }))
+        ]);
+        if (cfgRes.success) setConfig(cfgRes.data);
+        if (sessionRes.success && sessionRes.data) setCurrentSession(sessionRes.data);
+        return;
+      }
+
       const [cfgRes, sessionRes, txRes] = await Promise.all([
         api.getConfig(),
         api.getCurrentSession(),
@@ -300,11 +313,11 @@ export function App() {
       )}
 
       {/* Main Workspace Body */}
-      <main className="main-content">
+      <main className="main-content" style={{ justifyContent: isCustomerLink ? 'center' : undefined }}>
         {activeTab === 'POS' ? (
           <>
             {/* Left: Customer Facing Display Screen */}
-            <div className="left-panel">
+            <div className="left-panel" style={{ maxWidth: isCustomerLink ? '540px' : undefined, width: '100%' }}>
               <CustomerDisplay
                 session={currentSession}
                 paymentSuccessData={paymentSuccessData}
@@ -315,15 +328,17 @@ export function App() {
               />
             </div>
 
-            {/* Right: Cashier / Merchant Numpad Controller */}
-            <div className="right-panel">
-              <MerchantNumpad
-                onGenerate={handleGenerateSession}
-                onCancel={handleCancelSession}
-                isLoading={isLoading}
-                hasActiveSession={Boolean(currentSession && currentSession.status === 'WAITING_FOR_PAYMENT')}
-              />
-            </div>
+            {/* Right: Cashier / Merchant Numpad Controller (Hidden for remote customer links) */}
+            {!isCustomerLink && (
+              <div className="right-panel">
+                <MerchantNumpad
+                  onGenerate={handleGenerateSession}
+                  onCancel={handleCancelSession}
+                  isLoading={isLoading}
+                  hasActiveSession={Boolean(currentSession && currentSession.status === 'WAITING_FOR_PAYMENT')}
+                />
+              </div>
+            )}
           </>
         ) : (
           <TransactionLedger

@@ -63,6 +63,24 @@ export class SessionController {
   }
 
   /**
+   * GET /api/payment-session/:id
+   * Fetches a specific session by ID for dedicated customer links
+   */
+  public static getSession(req: Request, res: Response): void {
+    try {
+      const sessionId = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
+      const session = SessionService.getSessionById(sessionId);
+      if (!session) {
+        res.status(404).json({ success: false, error: 'Payment session not found or expired' });
+        return;
+      }
+      res.status(200).json({ success: true, data: session });
+    } catch (err: any) {
+      res.status(500).json({ success: false, error: 'Failed to retrieve session' });
+    }
+  }
+
+  /**
    * POST /api/payment-session/cancel
    * Cancels active session
    */

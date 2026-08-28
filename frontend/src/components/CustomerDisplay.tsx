@@ -114,6 +114,31 @@ export const CustomerDisplay: React.FC<CustomerDisplayProps> = ({
           </div>
         </div>
 
+        {/* Direct Mobile Pay & Share Actions */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', width: '100%', maxWidth: '340px', marginTop: '14px' }}>
+          <a
+            href={session.upi_uri}
+            className="btn-primary"
+            style={{ textDecoration: 'none', padding: '12px 18px', fontSize: '0.95rem' }}
+          >
+            ⚡ Tap to Pay ₹{session.amount.toFixed(2)} (GPay / PhonePe)
+          </a>
+
+          <button
+            type="button"
+            className="btn-secondary"
+            onClick={() => {
+              const shareUrl = `${window.location.origin}/?session=${session.id}`;
+              navigator.clipboard.writeText(shareUrl).then(() => {
+                alert('Payment link copied! Send it on WhatsApp/SMS to your customer.');
+              });
+            }}
+            style={{ fontSize: '0.85rem', padding: '8px 14px' }}
+          >
+            📋 Copy Shareable Payment Link
+          </button>
+        </div>
+
         {/* Merchant UPI ID pill */}
         <div className="merchant-id-pill">
           <span>UPI ID:</span>
