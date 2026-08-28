@@ -98,21 +98,21 @@ export const api = {
     return res.json();
   },
 
-  // Admin Server-side PIN Authentication
-  async verifyAdminPin(pin: string): Promise<{ success: boolean; error?: string }> {
-    const res = await fetch(`${API_BASE}/admin/verify-pin`, {
+  // Admin Server-side Login Authentication
+  async adminLogin(username: string, password: string): Promise<{ success: boolean; error?: string; adminToken?: string }> {
+    const res = await fetch(`${API_BASE}/admin/login`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ pin })
+      body: JSON.stringify({ username, password })
     });
     return res.json();
   },
 
-  async updateAdminPin(newPin: string): Promise<{ success: boolean; message?: string; error?: string }> {
-    const res = await fetch(`${API_BASE}/admin/update-pin`, {
+  async changeAdminPassword(newPassword: string): Promise<{ success: boolean; message?: string; error?: string }> {
+    const res = await fetch(`${API_BASE}/admin/change-password`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ newPin })
+      body: JSON.stringify({ newPassword })
     });
     return res.json();
   }

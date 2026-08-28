@@ -10,20 +10,20 @@ import {
   Volume2, 
   VolumeX, 
   AlertTriangle, 
-  CheckCircle2,
   Layers,
   CreditCard,
   Lock,
-  Unlock
+  LogOut,
+  ShieldCheck
 } from 'lucide-react';
 import { CustomerDisplay } from './components/CustomerDisplay';
 import { MerchantNumpad } from './components/MerchantNumpad';
 import { TransactionLedger } from './components/TransactionLedger';
 import { UserPaymentPortal } from './components/UserPaymentPortal';
+import { AdminLoginPage } from './components/AdminLoginPage';
 import { AndroidPairingModal } from './components/AndroidPairingModal';
 import { DemoSimulatorModal } from './components/DemoSimulatorModal';
 import { SettingsDrawer } from './components/SettingsDrawer';
-import { AdminAuthModal } from './components/AdminAuthModal';
 import { useWebSocket } from './hooks/useWebSocket';
 import { useSoundbox } from './hooks/useSoundbox';
 import { api } from './services/api';
@@ -34,18 +34,15 @@ export function App() {
   const urlParams = new URLSearchParams(window.location.search);
   const isCustomerLink = Boolean(urlParams.get('session') || urlParams.get('amount') || urlParams.get('pay'));
   
-  const [isAdminUnlocked, setIsAdminUnlocked] = useState<boolean>(() => {
+  // Admin authentication state
+  const [isAdminLoggedIn, setIsAdminLoggedIn] = useState<boolean>(() => {
     return sessionStorage.getItem('payflow_admin_auth') === 'true';
   });
-  const [isAdminAuthModalOpen, setIsAdminAuthModalOpen] = useState(false);
-  const [targetAdminTab, setTargetAdminTab] = useState<'POS' | 'LEDGER'>('POS');
-  const [adminPin, setAdminPin] = useState<string>(() => {
-    return localStorage.getItem('payflow_admin_pin') || '1234';
+  const [showAdminLogin, setShowAdminLogin] = useState<boolean>(() => {
+    return urlParams.get('admin') === 'true' && !sessionStorage.getItem('payflow_admin_auth');
   });
 
-  const initialTab = (urlParams.get('admin') === 'true' && isAdminUnlocked) ? 'POS' : 'MEMBER_PAY';
-
-  const [activeTab, setActiveTab] = useState<'MEMBER_PAY' | 'POS' | 'LEDGER'>(initialTab);
+  const [activeAdminTab, setActiveAdminTab] = useState<'POS' | 'LEDGER' | 'PORTAL'>('POS');
   const [currentSession, setCurrentSession] = useState<PaymentSession | null>(null);
   const [paymentSuccessData, setPaymentSuccessData] = useState<PaymentReceivedPayload | null>(null);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
@@ -141,48 +138,58 @@ export function App() {
         setTransactions(res.data);
         setStats(res.stats);
       }
-    });
+    }).catch(console.error);
   }, [config.soundboxVoiceEnabled, config.soundboxLanguage, isMuted, announcePayment]);
 
-  // Handle Amount Mismatch
-  const handleAmountMismatch = useCallback((data: any) => {
+  // Handle unsolicited spontaneous payments
+  const handleUnsolicitedPayment = useCallback((data: PaymentReceivedPayload) => {
     setBannerAlert({
-      type: 'warning',
-      title: 'Payment Amount Mismatch Detected!',
-      message: `Received ₹${data.receivedAmount.toFixed(2)} from ${data.appSource || 'UPI'}, but expected ₹${data.expectedAmount.toFixed(2)} [UTR: ${data.transactionId}]. Payment was NOT confirmed.`
+      title: 'Payment Received Outside Session',
+      message: `₹${data.amount.toFixed(2)} received from ${data.payerName || 'UPI Customer'} (Ref: ${data.transactionId})`,
+      type: 'warning'
     });
-    setTimeout(() => setBannerAlert(null), 8000);
+
+    if (config.soundboxVoiceEnabled && !isMuted) {
+      announcePayment(data.amount, data.appSource || 'UPI', config.soundboxLanguage);
+    }
+
+    api.getTransactions({ limit: 50 }).then((res) => {
+      if (res.success) {
+        setTransactions(res.data);
+        setStats(res.stats);
+      }
+    }).catch(console.error);
+  }, [config.soundboxVoiceEnabled, config.soundboxLanguage, isMuted, announcePayment]);
+
+  // Handle session created from other controller/display
+  const handleSessionCreated = useCallback((session: PaymentSession) => {
+    setCurrentSession(session);
+    setPaymentSuccessData(null);
   }, []);
 
-  // Handle Duplicate Payment Warning
-  const handleDuplicateWarning = useCallback((data: any) => {
-    setBannerAlert({
-      type: 'warning',
-      title: 'Duplicate Transaction Ignored',
-      message: `Transaction ${data.transactionId} was already processed previously. Ignored duplicate notification.`
-    });
-    setTimeout(() => setBannerAlert(null), 7000);
+  // Handle session cancelled/reset
+  const handleSessionStateChange = useCallback((session: PaymentSession | null) => {
+    setCurrentSession(session);
+    if (!session) {
+      setPaymentSuccessData(null);
+    }
   }, []);
 
-  // WebSocket real-time connection
+  // Setup WebSocket real-time listener
   const { isConnected } = useWebSocket({
     onPaymentReceived: handlePaymentReceived,
-    onSessionCreated: (data) => {
-      setCurrentSession(data.session);
-      setPaymentSuccessData(null);
-    },
-    onSessionCancelled: () => {
-      setCurrentSession(null);
-      setPaymentSuccessData(null);
-    },
-    onAmountMismatch: handleAmountMismatch,
-    onDuplicateWarning: handleDuplicateWarning
+    onUnsolicitedPayment: handleUnsolicitedPayment,
+    onSessionCreated: handleSessionCreated,
+    onSessionCancelled: () => handleSessionStateChange(null),
+    onSessionReset: () => handleSessionStateChange(null),
+    onSessionExpired: () => {
+      setCurrentSession((prev) => prev ? { ...prev, status: 'EXPIRED' } : null);
+    }
   });
 
-  // Handle manual session generation from Numpad
+  // Cashier POS Actions
   const handleGenerateSession = async (amount: number, note?: string) => {
     setIsLoading(true);
-    setBannerAlert(null);
     try {
       const res = await api.createSession(amount, note);
       if (res.success) {
@@ -191,8 +198,8 @@ export function App() {
       }
     } catch (err: any) {
       setBannerAlert({
+        title: 'Error Generating QR',
         type: 'error',
-        title: 'QR Generation Failed',
         message: err.message || 'Could not generate UPI QR code.'
       });
     } finally {
@@ -200,7 +207,6 @@ export function App() {
     }
   };
 
-  // Handle Session Cancellation
   const handleCancelSession = async () => {
     setIsLoading(true);
     try {
@@ -214,7 +220,6 @@ export function App() {
     }
   };
 
-  // Handle Return to Ready state
   const handleResetToReady = async () => {
     try {
       await api.resetSession();
@@ -226,7 +231,6 @@ export function App() {
     }
   };
 
-  // Toggle fullscreen
   const toggleFullscreen = () => {
     if (!document.fullscreenElement) {
       document.documentElement.requestFullscreen().catch(() => {});
@@ -237,6 +241,99 @@ export function App() {
     }
   };
 
+  const handleLogout = () => {
+    sessionStorage.removeItem('payflow_admin_auth');
+    sessionStorage.removeItem('payflow_admin_token');
+    setIsAdminLoggedIn(false);
+    setShowAdminLogin(false);
+  };
+
+  // ==========================================
+  // VIEW 1: PUBLIC / USER PAYMENT PORTAL
+  // ==========================================
+  if (!isAdminLoggedIn) {
+    if (showAdminLogin) {
+      return (
+        <div className="app-container">
+          <header className="app-header">
+            <div className="brand-section">
+              <div className="brand-icon">
+                <QrCode size={24} strokeWidth={2.5} />
+              </div>
+              <div>
+                <div className="brand-title">{config.merchantName || 'MGOCSM Jaipur'}</div>
+                <div className="brand-subtitle">Admin Access</div>
+              </div>
+            </div>
+            <div>
+              <button
+                className="btn-secondary"
+                onClick={() => setShowAdminLogin(false)}
+                style={{ fontSize: '0.85rem', padding: '6px 14px' }}
+              >
+                ← Back to Member Pay
+              </button>
+            </div>
+          </header>
+
+          <main className="main-content" style={{ justifyContent: 'center' }}>
+            <AdminLoginPage
+              onSuccess={() => {
+                setIsAdminLoggedIn(true);
+                setShowAdminLogin(false);
+              }}
+              onCancel={() => setShowAdminLogin(false)}
+            />
+          </main>
+        </div>
+      );
+    }
+
+    return (
+      <div className="app-container">
+        <header className="app-header">
+          <div className="brand-section">
+            <div className="brand-icon">
+              <QrCode size={24} strokeWidth={2.5} />
+            </div>
+            <div>
+              <div className="brand-title">{config.merchantName || 'MGOCSM Jaipur'}</div>
+              <div className="brand-subtitle">Official UPI Payment Portal</div>
+            </div>
+          </div>
+
+          <div className="header-actions">
+            <div className={`status-pill ${isConnected ? 'online' : 'offline'}`}>
+              <span className="status-dot pulsing" />
+              <span>{isConnected ? 'Server Online' : 'Connecting...'}</span>
+            </div>
+
+            <button
+              className="btn-secondary"
+              onClick={() => setShowAdminLogin(true)}
+              style={{ fontSize: '0.82rem', padding: '6px 12px', borderColor: 'rgba(255, 255, 255, 0.15)' }}
+            >
+              <Lock size={14} /> Admin Login
+            </button>
+          </div>
+        </header>
+
+        <main className="main-content" style={{ justifyContent: 'center', padding: '24px 16px' }}>
+          <div style={{ width: '100%', maxWidth: '520px' }}>
+            <UserPaymentPortal
+              merchantName={config.merchantName}
+              merchantUpiId={config.merchantUpiId}
+              autoResetSeconds={config.autoResetDelaySeconds}
+            />
+          </div>
+        </main>
+      </div>
+    );
+  }
+
+  // ==========================================
+  // VIEW 2: AUTHENTICATED ADMIN DASHBOARD
+  // ==========================================
   return (
     <div className={`app-container ${isFullscreen ? 'fullscreen-mode' : ''}`}>
       {/* Top Navbar */}
@@ -247,66 +344,37 @@ export function App() {
           </div>
           <div>
             <div className="brand-title">{config.merchantName || 'MGOCSM Jaipur'}</div>
-            <div className="brand-subtitle">PayFlow UPI Terminal</div>
+            <div className="brand-subtitle" style={{ color: '#34d399', fontWeight: 700 }}>Admin Dashboard</div>
           </div>
         </div>
 
         {/* Center Tabs */}
         <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
           <button 
-            className={`nav-tab-btn ${activeTab === 'MEMBER_PAY' ? 'active' : ''}`}
-            onClick={() => setActiveTab('MEMBER_PAY')}
+            className={`nav-tab-btn ${activeAdminTab === 'POS' ? 'active' : ''}`}
+            onClick={() => setActiveAdminTab('POS')}
           >
-            <CreditCard size={16} /> Pay via UPI
+            <Layers size={16} /> POS Counter
           </button>
           <button 
-            className={`nav-tab-btn ${activeTab === 'POS' ? 'active' : ''}`}
-            onClick={() => {
-              if (!isAdminUnlocked) {
-                setTargetAdminTab('POS');
-                setIsAdminAuthModalOpen(true);
-              } else {
-                setActiveTab('POS');
-              }
-            }}
+            className={`nav-tab-btn ${activeAdminTab === 'LEDGER' ? 'active' : ''}`}
+            onClick={() => setActiveAdminTab('LEDGER')}
           >
-            <Layers size={16} /> POS Counter {!isAdminUnlocked && <Lock size={12} style={{ opacity: 0.6 }} />}
+            <History size={16} /> Transactions ({stats.todayCount})
           </button>
           <button 
-            className={`nav-tab-btn ${activeTab === 'LEDGER' ? 'active' : ''}`}
-            onClick={() => {
-              if (!isAdminUnlocked) {
-                setTargetAdminTab('LEDGER');
-                setIsAdminAuthModalOpen(true);
-              } else {
-                setActiveTab('LEDGER');
-              }
-            }}
+            className={`nav-tab-btn ${activeAdminTab === 'PORTAL' ? 'active' : ''}`}
+            onClick={() => setActiveAdminTab('PORTAL')}
           >
-            <History size={16} /> Admin Ledger ({stats.todayCount}) {!isAdminUnlocked && <Lock size={12} style={{ opacity: 0.6 }} />}
+            <CreditCard size={16} /> Member Portal Preview
           </button>
         </div>
 
         {/* Right Tools & Status */}
         <div className="header-actions">
-          {isAdminUnlocked && (
-            <button
-              className="btn-secondary"
-              onClick={() => {
-                sessionStorage.removeItem('payflow_admin_auth');
-                setIsAdminUnlocked(false);
-                setActiveTab('MEMBER_PAY');
-              }}
-              style={{ borderColor: 'rgba(239, 68, 68, 0.4)', color: '#f87171', padding: '6px 10px', fontSize: '0.82rem' }}
-              title="Lock Admin Session"
-            >
-              <Lock size={14} /> Lock Admin
-            </button>
-          )}
-
           <div className={`status-pill ${isConnected ? 'online' : 'offline'}`}>
             <span className="status-dot pulsing" />
-            <span>{isConnected ? 'Server Live' : 'Reconnecting...'}</span>
+            <span>{isConnected ? 'Live' : 'Offline'}</span>
           </div>
 
           <button
@@ -352,6 +420,15 @@ export function App() {
           >
             {isFullscreen ? <Minimize2 size={18} /> : <Maximize2 size={18} />}
           </button>
+
+          <button
+            className="btn-secondary"
+            onClick={handleLogout}
+            style={{ borderColor: 'rgba(239, 68, 68, 0.4)', color: '#f87171', padding: '6px 12px', fontSize: '0.85rem' }}
+            title="Log out of Admin Dashboard"
+          >
+            <LogOut size={15} /> Logout
+          </button>
         </div>
       </header>
 
@@ -384,19 +461,11 @@ export function App() {
       )}
 
       {/* Main Workspace Body */}
-      <main className="main-content" style={{ justifyContent: activeTab === 'MEMBER_PAY' || isCustomerLink ? 'center' : undefined }}>
-        {activeTab === 'MEMBER_PAY' ? (
-          <div style={{ width: '100%', maxWidth: '520px', animation: 'fade-in 0.3s ease' }}>
-            <UserPaymentPortal
-              merchantName={config.merchantName}
-              merchantUpiId={config.merchantUpiId}
-              autoResetSeconds={config.autoResetDelaySeconds}
-            />
-          </div>
-        ) : activeTab === 'POS' ? (
+      <main className="main-content">
+        {activeAdminTab === 'POS' ? (
           <>
             {/* Left: Customer Facing Display Screen */}
-            <div className="left-panel" style={{ maxWidth: isCustomerLink ? '540px' : undefined, width: '100%' }}>
+            <div className="left-panel">
               <CustomerDisplay
                 session={currentSession}
                 paymentSuccessData={paymentSuccessData}
@@ -407,39 +476,35 @@ export function App() {
               />
             </div>
 
-            {/* Right: Cashier / Merchant Numpad Controller (Hidden for remote customer links) */}
-            {!isCustomerLink && (
-              <div className="right-panel">
-                <MerchantNumpad
-                  onGenerate={handleGenerateSession}
-                  onCancel={handleCancelSession}
-                  isLoading={isLoading}
-                  hasActiveSession={Boolean(currentSession && currentSession.status === 'WAITING_FOR_PAYMENT')}
-                />
-              </div>
-            )}
+            {/* Right: Cashier / Merchant Numpad Controller */}
+            <div className="right-panel">
+              <MerchantNumpad
+                onGenerate={handleGenerateSession}
+                onCancel={handleCancelSession}
+                isLoading={isLoading}
+                hasActiveSession={Boolean(currentSession && currentSession.status === 'WAITING_FOR_PAYMENT')}
+              />
+            </div>
           </>
-        ) : (
+        ) : activeAdminTab === 'LEDGER' ? (
           <TransactionLedger
             transactions={transactions}
             stats={stats}
             onRefresh={loadInitialData}
             isLoading={isLoading}
           />
+        ) : (
+          <div style={{ width: '100%', maxWidth: '520px', margin: '0 auto' }}>
+            <UserPaymentPortal
+              merchantName={config.merchantName}
+              merchantUpiId={config.merchantUpiId}
+              autoResetSeconds={config.autoResetDelaySeconds}
+            />
+          </div>
         )}
       </main>
 
       {/* Modals & Dialogs */}
-      <AdminAuthModal
-        isOpen={isAdminAuthModalOpen}
-        onClose={() => setIsAdminAuthModalOpen(false)}
-        onSuccess={() => {
-          setIsAdminAuthModalOpen(false);
-          setIsAdminUnlocked(true);
-          setActiveTab(targetAdminTab);
-        }}
-      />
-
       <AndroidPairingModal
         isOpen={isPairingModalOpen}
         onClose={() => setIsPairingModalOpen(false)}
@@ -449,17 +514,15 @@ export function App() {
       <DemoSimulatorModal
         isOpen={isSimulatorOpen}
         onClose={() => setIsSimulatorOpen(false)}
-        activeAmount={currentSession?.amount}
+        activeSessionAmount={currentSession?.status === 'WAITING_FOR_PAYMENT' ? currentSession.amount : undefined}
       />
 
       <SettingsDrawer
         isOpen={isSettingsOpen}
         onClose={() => setIsSettingsOpen(false)}
         config={config}
-        onConfigSaved={(newCfg) => setConfig(newCfg)}
+        onConfigSaved={(updated) => setConfig(updated)}
       />
     </div>
   );
 }
-
-export default App;
