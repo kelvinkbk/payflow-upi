@@ -33,7 +33,7 @@ test('UpiUtil - NPCI UPI Intent URI Generation', () => {
   });
 
   assert.ok(uri.startsWith('upi://pay?'));
-  assert.ok(uri.includes('pa=merchant%40okaxis'));
+  assert.ok(uri.includes('pa=merchant@okaxis'));
   assert.ok(uri.includes('pn=SuperStore+Express') || uri.includes('pn=SuperStore%20Express'));
   assert.ok(uri.includes('am=500.00'));
   assert.ok(uri.includes('cu=INR'));
