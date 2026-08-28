@@ -16,6 +16,7 @@ import {
 import { CustomerDisplay } from './components/CustomerDisplay';
 import { MerchantNumpad } from './components/MerchantNumpad';
 import { TransactionLedger } from './components/TransactionLedger';
+import { UserPaymentPortal } from './components/UserPaymentPortal';
 import { AndroidPairingModal } from './components/AndroidPairingModal';
 import { DemoSimulatorModal } from './components/DemoSimulatorModal';
 import { SettingsDrawer } from './components/SettingsDrawer';
@@ -26,7 +27,10 @@ import { MerchantConfig, PaymentReceivedPayload, PaymentSession, Transaction, Tr
 import './styles/app.css';
 
 export function App() {
-  const [activeTab, setActiveTab] = useState<'POS' | 'LEDGER'>('POS');
+  const urlParams = new URLSearchParams(window.location.search);
+  const initialTab = urlParams.get('admin') === 'true' ? 'POS' : 'MEMBER_PAY';
+
+  const [activeTab, setActiveTab] = useState<'MEMBER_PAY' | 'POS' | 'LEDGER'>(initialTab);
   const [currentSession, setCurrentSession] = useState<PaymentSession | null>(null);
   const [paymentSuccessData, setPaymentSuccessData] = useState<PaymentReceivedPayload | null>(null);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
@@ -238,6 +242,12 @@ export function App() {
         {/* Center Tabs */}
         <div style={{ display: 'flex', gap: '8px' }}>
           <button 
+            className={`nav-tab-btn ${activeTab === 'MEMBER_PAY' ? 'active' : ''}`}
+            onClick={() => setActiveTab('MEMBER_PAY')}
+          >
+            <CreditCard size={16} /> Pay via UPI
+          </button>
+          <button 
             className={`nav-tab-btn ${activeTab === 'POS' ? 'active' : ''}`}
             onClick={() => setActiveTab('POS')}
           >
@@ -247,7 +257,7 @@ export function App() {
             className={`nav-tab-btn ${activeTab === 'LEDGER' ? 'active' : ''}`}
             onClick={() => setActiveTab('LEDGER')}
           >
-            <History size={16} /> Transactions ({stats.todayCount})
+            <History size={16} /> Admin Ledger ({stats.todayCount})
           </button>
         </div>
 
@@ -333,8 +343,16 @@ export function App() {
       )}
 
       {/* Main Workspace Body */}
-      <main className="main-content" style={{ justifyContent: isCustomerLink ? 'center' : undefined }}>
-        {activeTab === 'POS' ? (
+      <main className="main-content" style={{ justifyContent: activeTab === 'MEMBER_PAY' || isCustomerLink ? 'center' : undefined }}>
+        {activeTab === 'MEMBER_PAY' ? (
+          <div style={{ width: '100%', maxWidth: '520px', animation: 'fade-in 0.3s ease' }}>
+            <UserPaymentPortal
+              merchantName={config.merchantName}
+              merchantUpiId={config.merchantUpiId}
+              autoResetSeconds={config.autoResetDelaySeconds}
+            />
+          </div>
+        ) : activeTab === 'POS' ? (
           <>
             {/* Left: Customer Facing Display Screen */}
             <div className="left-panel" style={{ maxWidth: isCustomerLink ? '540px' : undefined, width: '100%' }}>
