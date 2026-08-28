@@ -1,0 +1,32 @@
+services:
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: upi_display_backend
+    restart: unless-stopped
+    ports:
+      - "3001:3001"
+    environment:
+      - PORT=3001
+      - HOST=0.0.0.0
+      - MERCHANT_NAME=MGOCSM Jaipur
+      - MERCHANT_UPI_ID=mgocsmjaipur@nsdl
+      - DATABASE_PATH=/app/database/upi_display.db
+      - ANDROID_DEVICE_TOKEN=upi_secure_token_987654321
+      - PAYMENT_PROVIDER=hybrid
+      - SESSION_TIMEOUT_SECONDS=300
+      - AUTO_RESET_DELAY_SECONDS=7
+    volumes:
+      - ./database:/app/database
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: upi_display_frontend
+    restart: unless-stopped
+    ports:
+      - "5173:80"
+    depends_on:
+      - backend

@@ -1,0 +1,8 @@
+<resources>
+    <style name="Theme.UpiPaymentListener" parent="Theme.MaterialComponents.DayNight.DarkActionBar">
+        <item name="colorPrimary">@color/primary_emerald</item>
+        <item name="colorPrimaryVariant">#059669</item>
+        <item name="colorOnPrimary">@color/white</item>
+        <item name="android:statusBarColor">#090D16</item>
+    </style>
+</resources>
