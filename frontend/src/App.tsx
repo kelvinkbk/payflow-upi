@@ -432,7 +432,6 @@ export function App() {
       {/* Modals & Dialogs */}
       <AdminAuthModal
         isOpen={isAdminAuthModalOpen}
-        correctPin={adminPin}
         onClose={() => setIsAdminAuthModalOpen(false)}
         onSuccess={() => {
           setIsAdminAuthModalOpen(false);
