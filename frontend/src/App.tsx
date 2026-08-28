@@ -12,7 +12,9 @@ import {
   AlertTriangle, 
   CheckCircle2,
   Layers,
-  CreditCard
+  CreditCard,
+  Lock,
+  Unlock
 } from 'lucide-react';
 import { CustomerDisplay } from './components/CustomerDisplay';
 import { MerchantNumpad } from './components/MerchantNumpad';
@@ -21,6 +23,7 @@ import { UserPaymentPortal } from './components/UserPaymentPortal';
 import { AndroidPairingModal } from './components/AndroidPairingModal';
 import { DemoSimulatorModal } from './components/DemoSimulatorModal';
 import { SettingsDrawer } from './components/SettingsDrawer';
+import { AdminAuthModal } from './components/AdminAuthModal';
 import { useWebSocket } from './hooks/useWebSocket';
 import { useSoundbox } from './hooks/useSoundbox';
 import { api } from './services/api';
@@ -30,7 +33,17 @@ import './styles/app.css';
 export function App() {
   const urlParams = new URLSearchParams(window.location.search);
   const isCustomerLink = Boolean(urlParams.get('session') || urlParams.get('amount') || urlParams.get('pay'));
-  const initialTab = urlParams.get('admin') === 'true' ? 'POS' : 'MEMBER_PAY';
+  
+  const [isAdminUnlocked, setIsAdminUnlocked] = useState<boolean>(() => {
+    return sessionStorage.getItem('payflow_admin_auth') === 'true';
+  });
+  const [isAdminAuthModalOpen, setIsAdminAuthModalOpen] = useState(false);
+  const [targetAdminTab, setTargetAdminTab] = useState<'POS' | 'LEDGER'>('POS');
+  const [adminPin, setAdminPin] = useState<string>(() => {
+    return localStorage.getItem('payflow_admin_pin') || '1234';
+  });
+
+  const initialTab = (urlParams.get('admin') === 'true' && isAdminUnlocked) ? 'POS' : 'MEMBER_PAY';
 
   const [activeTab, setActiveTab] = useState<'MEMBER_PAY' | 'POS' | 'LEDGER'>(initialTab);
   const [currentSession, setCurrentSession] = useState<PaymentSession | null>(null);
@@ -239,7 +252,7 @@ export function App() {
         </div>
 
         {/* Center Tabs */}
-        <div style={{ display: 'flex', gap: '8px' }}>
+        <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
           <button 
             className={`nav-tab-btn ${activeTab === 'MEMBER_PAY' ? 'active' : ''}`}
             onClick={() => setActiveTab('MEMBER_PAY')}
@@ -248,20 +261,49 @@ export function App() {
           </button>
           <button 
             className={`nav-tab-btn ${activeTab === 'POS' ? 'active' : ''}`}
-            onClick={() => setActiveTab('POS')}
+            onClick={() => {
+              if (!isAdminUnlocked) {
+                setTargetAdminTab('POS');
+                setIsAdminAuthModalOpen(true);
+              } else {
+                setActiveTab('POS');
+              }
+            }}
           >
-            <Layers size={16} /> POS Counter
+            <Layers size={16} /> POS Counter {!isAdminUnlocked && <Lock size={12} style={{ opacity: 0.6 }} />}
           </button>
           <button 
             className={`nav-tab-btn ${activeTab === 'LEDGER' ? 'active' : ''}`}
-            onClick={() => setActiveTab('LEDGER')}
+            onClick={() => {
+              if (!isAdminUnlocked) {
+                setTargetAdminTab('LEDGER');
+                setIsAdminAuthModalOpen(true);
+              } else {
+                setActiveTab('LEDGER');
+              }
+            }}
           >
-            <History size={16} /> Admin Ledger ({stats.todayCount})
+            <History size={16} /> Admin Ledger ({stats.todayCount}) {!isAdminUnlocked && <Lock size={12} style={{ opacity: 0.6 }} />}
           </button>
         </div>
 
         {/* Right Tools & Status */}
         <div className="header-actions">
+          {isAdminUnlocked && (
+            <button
+              className="btn-secondary"
+              onClick={() => {
+                sessionStorage.removeItem('payflow_admin_auth');
+                setIsAdminUnlocked(false);
+                setActiveTab('MEMBER_PAY');
+              }}
+              style={{ borderColor: 'rgba(239, 68, 68, 0.4)', color: '#f87171', padding: '6px 10px', fontSize: '0.82rem' }}
+              title="Lock Admin Session"
+            >
+              <Lock size={14} /> Lock Admin
+            </button>
+          )}
+
           <div className={`status-pill ${isConnected ? 'online' : 'offline'}`}>
             <span className="status-dot pulsing" />
             <span>{isConnected ? 'Server Live' : 'Reconnecting...'}</span>
@@ -388,6 +430,17 @@ export function App() {
       </main>
 
       {/* Modals & Dialogs */}
+      <AdminAuthModal
+        isOpen={isAdminAuthModalOpen}
+        correctPin={adminPin}
+        onClose={() => setIsAdminAuthModalOpen(false)}
+        onSuccess={() => {
+          setIsAdminAuthModalOpen(false);
+          setIsAdminUnlocked(true);
+          setActiveTab(targetAdminTab);
+        }}
+      />
+
       <AndroidPairingModal
         isOpen={isPairingModalOpen}
         onClose={() => setIsPairingModalOpen(false)}

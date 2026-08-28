@@ -193,6 +193,27 @@ export const SettingsDrawer: React.FC<SettingsDrawerProps> = ({
             </span>
           </div>
 
+          <div className="form-group">
+            <label className="form-label" style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+              <Key size={16} style={{ color: '#3b82f6' }} /> Admin Dashboard PIN / Password
+            </label>
+            <input
+              type="text"
+              className="form-input"
+              defaultValue={localStorage.getItem('payflow_admin_pin') || '1234'}
+              onChange={(e) => {
+                if (e.target.value) {
+                  localStorage.setItem('payflow_admin_pin', e.target.value.trim());
+                }
+              }}
+              required
+              placeholder="e.g. 1234 or your secret PIN"
+            />
+            <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
+              PIN required to unlock POS Counter and Transactions Ledger from public mode.
+            </span>
+          </div>
+
           <div style={{ display: 'flex', gap: '12px', marginTop: '24px' }}>
             <button type="button" className="btn-secondary" onClick={onClose} style={{ flex: 1 }}>
               Cancel
