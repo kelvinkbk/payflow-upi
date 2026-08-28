@@ -122,6 +122,46 @@ export function App() {
     loadInitialData();
   }, [loadInitialData]);
 
+  // Real-Time Background Sync Loop (ensures mobile Safari stays 100% in sync)
+  useEffect(() => {
+    const syncInterval = setInterval(async () => {
+      try {
+        // Sync 1: If in Admin mode, refresh transaction ledger every 3.5s
+        if (isAdminLoggedIn) {
+          const txRes = await api.getTransactions({ limit: 50 });
+          if (txRes.success) {
+            setTransactions(txRes.data);
+            setStats(txRes.stats);
+          }
+        }
+
+        // Sync 2: If active POS session is waiting for payment, check status
+        if (currentSession && currentSession.status === 'WAITING_FOR_PAYMENT') {
+          const sRes = await api.getSession(currentSession.id).catch(() => api.getCurrentSession());
+          if (sRes.success && sRes.data) {
+            if (sRes.data.status === 'PAYMENT_RECEIVED') {
+              setCurrentSession(sRes.data);
+              setPaymentSuccessData({
+                sessionId: sRes.data.id,
+                amount: sRes.data.amount,
+                currency: 'INR',
+                transactionId: 'VERIFIED_ON_LEDGER',
+                payerName: 'UPI Customer',
+                appSource: 'UPI',
+                detectionSource: 'system',
+                timestamp: new Date().toISOString()
+              });
+            }
+          }
+        }
+      } catch (err) {
+        // silent retry
+      }
+    }, 3500);
+
+    return () => clearInterval(syncInterval);
+  }, [isAdminLoggedIn, currentSession]);
+
   // Handle successful payment received event
   const handlePaymentReceived = useCallback((data: PaymentReceivedPayload) => {
     setPaymentSuccessData(data);

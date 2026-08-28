@@ -27,6 +27,36 @@ export const UserPaymentPortal: React.FC<UserPaymentPortalProps> = ({
 
   const quickAmounts = [50, 100, 250, 500, 1000, 2000, 5000];
 
+  // Active Real-Time Polling for Member Payment Confirmation
+  React.useEffect(() => {
+    if (!session || session.status !== 'WAITING_FOR_PAYMENT') return;
+
+    const pollStatus = async () => {
+      try {
+        const res = await api.getSession(session.id);
+        if (res.success && res.data && res.data.status === 'PAYMENT_RECEIVED') {
+          setSession(res.data);
+          setPaymentSuccess({
+            sessionId: res.data.id,
+            amount: res.data.amount,
+            currency: 'INR',
+            transactionId: 'VERIFIED_ON_LEDGER',
+            payerName: payerName || 'Member',
+            appSource: 'UPI',
+            detectionSource: 'system',
+            timestamp: new Date().toISOString()
+          });
+        }
+      } catch (err) {
+        // network retry
+      }
+    };
+
+    pollStatus();
+    const interval = setInterval(pollStatus, 2000);
+    return () => clearInterval(interval);
+  }, [session, payerName]);
+
   const handleGenerate = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
