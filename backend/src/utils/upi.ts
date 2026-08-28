@@ -74,7 +74,9 @@ export class UpiUtil {
       urlParams.append('mc', params.mc.trim());
     }
 
-    return `upi://pay?${urlParams.toString()}`;
+    // NPCI standard requires literal '@' in payee VPA (pa parameter)
+    const rawQuery = urlParams.toString().replace(/%40/g, '@');
+    return `upi://pay?${rawQuery}`;
   }
 
   /**
