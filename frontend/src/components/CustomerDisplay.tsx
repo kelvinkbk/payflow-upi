@@ -114,30 +114,98 @@ export const CustomerDisplay: React.FC<CustomerDisplayProps> = ({
           </div>
         </div>
 
-        {/* Direct Mobile Pay & Share Actions */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', width: '100%', maxWidth: '340px', marginTop: '14px' }}>
-          <a
-            href={session.upi_uri}
-            className="btn-primary"
-            style={{ textDecoration: 'none', padding: '12px 18px', fontSize: '0.95rem' }}
-          >
-            ⚡ Tap to Pay ₹{session.amount.toFixed(2)} (GPay / PhonePe)
-          </a>
+        {/* Direct Mobile UPI App Selectors */}
+        {(() => {
+          const upiQuery = session.upi_uri.replace(/^upi:\/\/pay\?/, '');
+          const gpayUri = `tez://upi/pay?${upiQuery}`;
+          const phonepeUri = `phonepe://pay?${upiQuery}`;
+          const paytmUri = `paytmmp://pay?${upiQuery}`;
+          const bhimUri = `bhim://pay?${upiQuery}`;
 
-          <button
-            type="button"
-            className="btn-secondary"
-            onClick={() => {
-              const shareUrl = `${window.location.origin}/?session=${session.id}`;
-              navigator.clipboard.writeText(shareUrl).then(() => {
-                alert('Payment link copied! Send it on WhatsApp/SMS to your customer.');
-              });
-            }}
-            style={{ fontSize: '0.85rem', padding: '8px 14px' }}
-          >
-            📋 Copy Shareable Payment Link
-          </button>
-        </div>
+          return (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', width: '100%', maxWidth: '380px', marginTop: '16px' }}>
+              <div style={{ fontSize: '0.8rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                Tap your UPI App to Pay:
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
+                <a
+                  href={gpayUri}
+                  className="btn-secondary"
+                  style={{
+                    textDecoration: 'none',
+                    padding: '10px 12px',
+                    fontSize: '0.85rem',
+                    borderColor: 'rgba(66, 133, 244, 0.4)',
+                    color: '#ffffff',
+                    background: 'rgba(66, 133, 244, 0.15)'
+                  }}
+                >
+                  <span style={{ color: '#4285F4', fontWeight: 900 }}>G</span> Google Pay
+                </a>
+
+                <a
+                  href={phonepeUri}
+                  className="btn-secondary"
+                  style={{
+                    textDecoration: 'none',
+                    padding: '10px 12px',
+                    fontSize: '0.85rem',
+                    borderColor: 'rgba(95, 37, 159, 0.4)',
+                    color: '#ffffff',
+                    background: 'rgba(95, 37, 159, 0.2)'
+                  }}
+                >
+                  <span style={{ color: '#a855f7', fontWeight: 900 }}>Pe</span> PhonePe
+                </a>
+
+                <a
+                  href={paytmUri}
+                  className="btn-secondary"
+                  style={{
+                    textDecoration: 'none',
+                    padding: '10px 12px',
+                    fontSize: '0.85rem',
+                    borderColor: 'rgba(0, 185, 245, 0.4)',
+                    color: '#ffffff',
+                    background: 'rgba(0, 185, 245, 0.15)'
+                  }}
+                >
+                  <span style={{ color: '#00b9f5', fontWeight: 900 }}>P</span> Paytm
+                </a>
+
+                <a
+                  href={session.upi_uri}
+                  className="btn-secondary"
+                  style={{
+                    textDecoration: 'none',
+                    padding: '10px 12px',
+                    fontSize: '0.85rem',
+                    borderColor: 'rgba(16, 185, 129, 0.4)',
+                    color: '#ffffff',
+                    background: 'rgba(16, 185, 129, 0.15)'
+                  }}
+                >
+                  <span style={{ color: '#10b981', fontWeight: 900 }}>UPI</span> Any App / WA
+                </a>
+              </div>
+
+              <button
+                type="button"
+                className="btn-secondary"
+                onClick={() => {
+                  const shareUrl = `${window.location.origin}/?session=${session.id}`;
+                  navigator.clipboard.writeText(shareUrl).then(() => {
+                    alert('Payment link copied! Send it on WhatsApp/SMS to your customer.');
+                  });
+                }}
+                style={{ fontSize: '0.82rem', padding: '8px 12px', marginTop: '4px' }}
+              >
+                📋 Copy Shareable Payment Link
+              </button>
+            </div>
+          );
+        })()}
 
         {/* Merchant UPI ID pill */}
         <div className="merchant-id-pill">
