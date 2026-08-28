@@ -11,7 +11,8 @@ import {
   VolumeX, 
   AlertTriangle, 
   CheckCircle2,
-  Layers
+  Layers,
+  CreditCard
 } from 'lucide-react';
 import { CustomerDisplay } from './components/CustomerDisplay';
 import { MerchantNumpad } from './components/MerchantNumpad';
@@ -28,6 +29,7 @@ import './styles/app.css';
 
 export function App() {
   const urlParams = new URLSearchParams(window.location.search);
+  const isCustomerLink = Boolean(urlParams.get('session') || urlParams.get('amount') || urlParams.get('pay'));
   const initialTab = urlParams.get('admin') === 'true' ? 'POS' : 'MEMBER_PAY';
 
   const [activeTab, setActiveTab] = useState<'MEMBER_PAY' | 'POS' | 'LEDGER'>(initialTab);
@@ -55,9 +57,6 @@ export function App() {
   const [isLoading, setIsLoading] = useState(false);
 
   const { announcePayment } = useSoundbox();
-
-  const urlParams = new URLSearchParams(window.location.search);
-  const isCustomerLink = Boolean(urlParams.get('session') || urlParams.get('amount') || urlParams.get('pay'));
 
   // Load initial data
   const loadInitialData = useCallback(async () => {
