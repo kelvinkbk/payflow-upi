@@ -52,15 +52,13 @@ export class SessionService {
     const timeoutSec = params.timeoutSeconds || env.SESSION_TIMEOUT_SECONDS;
     const expiresAt = new Date(Date.now() + timeoutSec * 1000).toISOString();
 
-    // Generate compliant UPI Intent URI
+    // Generate clean, universally compatible UPI Intent URI
     const upiUri = UpiUtil.generateUpiUri({
       pa: upiId,
       pn: merchantName,
       am: params.amount,
       cu: params.currency || 'INR',
-      tn: note,
-      tr: orderRef,
-      mc: env.MERCHANT_CATEGORY_CODE
+      tn: note
     });
 
     // Cancel any previous pending WAITING_FOR_PAYMENT sessions
