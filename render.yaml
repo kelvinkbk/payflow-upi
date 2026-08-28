@@ -1,6 +1,6 @@
 services:
   - type: web
-    name: upi-display-backend
+    name: payflow-upi-backend
     env: node
     plan: free
     buildCommand: cd backend && npm install && npm run build

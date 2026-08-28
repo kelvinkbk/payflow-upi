@@ -1,5 +1,5 @@
 {
-  "name": "upi-payment-display-backend",
+  "name": "payflow-upi-backend",
   "version": "1.0.0",
   "description": "Real-time UPI Payment Received Display System Backend",
   "main": "dist/server.js",

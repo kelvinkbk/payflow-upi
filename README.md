@@ -1,4 +1,4 @@
-# Indian UPI Real-Time Payment Received Display System 🇮🇳
+# PayFlow UPI 🇮🇳
 
 An enterprise-grade, real-time UPI payment display and verification system designed for shop counters, retail terminals, tablets, and kiosks.
 

@@ -3,7 +3,7 @@ services:
     build:
       context: ./backend
       dockerfile: Dockerfile
-    container_name: upi_display_backend
+    container_name: payflow_upi_backend
     restart: unless-stopped
     ports:
       - "3001:3001"
@@ -24,7 +24,7 @@ services:
     build:
       context: ./frontend
       dockerfile: Dockerfile
-    container_name: upi_display_frontend
+    container_name: payflow_upi_frontend
     restart: unless-stopped
     ports:
       - "5173:80"

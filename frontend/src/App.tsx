@@ -197,8 +197,8 @@ export function App() {
             <QrCode size={24} strokeWidth={2.5} />
           </div>
           <div>
-            <div className="brand-title">{config.merchantName || 'SuperStore Express'}</div>
-            <div className="brand-subtitle">UPI Real-Time Payment Terminal</div>
+            <div className="brand-title">{config.merchantName || 'MGOCSM Jaipur'}</div>
+            <div className="brand-subtitle">PayFlow UPI Terminal</div>
           </div>
         </div>
 
